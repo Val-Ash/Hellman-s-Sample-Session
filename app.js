@@ -12,7 +12,9 @@ let capOpen, splat, squeeze, stir;
 let lastGesture = null;
 let pendingGesture = null;
 let pendingCount = 0;
+let releaseCount = 0;
 const STABLE_FRAMES = 2;
+const RELEASE_FRAMES = 4;
 
 let audioReady = false;
 let isPlaying  = false;
@@ -26,8 +28,12 @@ function distance(a, b) {
 }
 
 function triggerOneShot(name, player) {
-  player.stop();
-  player.start();
+  if (!player || !player.loaded) {
+    console.warn("Player not ready:", name);
+    return;
+  }
+  try { player.stop(); } catch (e) {}
+  player.start(Tone.now() + 0.02);
   flashButton(name);
   spawnShockwave(name);
   console.log("TRIGGER:", name);
@@ -67,8 +73,11 @@ function detectGesture(hand) {
   const indexClearlyOut =
     distance(hand[8], hand[0]) > distance(hand[6], hand[0]) * 1.3;
 
-  if (pinchDist < 0.7 && indexClearlyOut && middleIn && ringIn && pinkyIn) return "SQUEEZE";
-  if (pinchDist > 0.7 && indexClearlyOut && middleIn && ringIn && pinkyIn) return "STIR";
+  const indexOnly = indexClearlyOut && middleIn && ringIn && pinkyIn;
+
+  if (indexOnly && pinchDist < 0.5) return "SQUEEZE";
+  if (indexOnly && pinchDist > 0.9) return "STIR";
+
   if (indexOut && middleOut && ringOut && pinkyOut) return "SPLAT";
   if (indexIn && middleIn && ringIn && pinkyIn) return "CAP";
   return null;
@@ -194,8 +203,9 @@ async function initAudio() {
   // --- ONE SHOTS ---
   capOpen = new Tone.Player("assets/sounds/mayo_cap_open.wav").connect(sfxGain);
   splat   = new Tone.Player("assets/sounds/mayo_splat.wav").connect(sfxGain);
-  splat.volume.value = 10;   // boost splat
+  splat.volume.value = 10;
   squeeze = new Tone.Player("assets/sounds/mayo_squeeze.wav").connect(sfxGain);
+  squeeze.volume.value = 6;
   stir    = new Tone.Player("assets/sounds/mayo_stir.wav").connect(sfxGain);
 
   // --- ANALYSERS ---
@@ -268,6 +278,7 @@ hands.onResults((results) => {
     lastGesture = null;
     pendingGesture = null;
     pendingCount = 0;
+    releaseCount = 0;
     showDebug(null, null);
     palmScreen = null;
     return;
@@ -309,12 +320,26 @@ hands.onResults((results) => {
       pendingCount = 1;
     }
 
+    // Release tracking: only "forget" lastGesture after a stable absence,
+    // so brief jitter doesn't count as a release.
+    if (lastGesture && gesture !== lastGesture) {
+      releaseCount++;
+      if (releaseCount >= RELEASE_FRAMES) {
+        lastGesture = null;
+        releaseCount = 0;
+      }
+    } else {
+      releaseCount = 0;
+    }
+
+    // Fire only on a stable NEW gesture (rising edge after release)
     if (
-      pendingCount === STABLE_FRAMES &&
+      pendingCount >= STABLE_FRAMES &&
       pendingGesture &&
       pendingGesture !== lastGesture
     ) {
       lastGesture = pendingGesture;
+      releaseCount = 0;
       const player = PLAYERS[pendingGesture]?.();
       if (player?.loaded) triggerOneShot(pendingGesture, player);
     }
@@ -323,6 +348,7 @@ hands.onResults((results) => {
     lastGesture = null;
     pendingGesture = null;
     pendingCount = 0;
+    releaseCount = 0;
   }
 });
 
@@ -403,7 +429,6 @@ function spawnShockwave(gestureName) {
     ? GESTURE_COLOR[gestureName]
     : GESTURE_COLOR.IDLE;
 
-  // emit 3 rings staggered in time for a "3D stack" effect
   for (let i = 0; i < 3; i++) {
     shockwaves.push({
       x: cx,
@@ -431,7 +456,6 @@ function drawShockwaves() {
 
     const [r, g, b] = s.color;
 
-    // outer soft glow ring
     fxCtx.strokeStyle = `rgba(${r},${g},${b},${s.alpha * 0.35})`;
     fxCtx.lineWidth   = s.thickness + 6;
     fxCtx.shadowColor = `rgba(${r},${g},${b},${s.alpha})`;
@@ -440,7 +464,6 @@ function drawShockwaves() {
     fxCtx.ellipse(s.x, s.y, s.r, s.r * s.tilt, 0, 0, Math.PI * 2);
     fxCtx.stroke();
 
-    // crisp inner ring
     fxCtx.strokeStyle = `rgba(${r},${g},${b},${s.alpha})`;
     fxCtx.lineWidth   = s.thickness;
     fxCtx.shadowBlur  = 12;
@@ -622,19 +645,16 @@ function enterFullscreen() {
   else if (el.msRequestFullscreen) el.msRequestFullscreen();
 }
 
-// Runs alongside your existing start button
 document.getElementById("start").addEventListener("click", () => {
   enterFullscreen();
 });
 
-// Runs alongside your existing Space bar control
 document.addEventListener("keydown", (e) => {
   if (e.code === "Space") {
     enterFullscreen();
   }
 });
 
-// Optional: hide cursor when fullscreen
 document.addEventListener("fullscreenchange", () => {
   document.body.style.cursor =
     document.fullscreenElement ? "none" : "default";
