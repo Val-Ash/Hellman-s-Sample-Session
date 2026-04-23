@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Audio + Hands Performance</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<div id="credit">P.S All sounds were created with Hellmann's Mayonnaise</div>
+
+<body>
+
+<!-- VISUAL FX LAYERS -->
+<div id="bgGlow"></div>
+<canvas id="fxCanvas"></canvas>
+<div id="beatFlash"></div>
+<div id="xfade"><div id="xfadeFill"></div></div>
+
+<!-- =========================
+     DEBUG HUD
+========================= -->
+<div id="debug" style="
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  padding: 10px 14px;
+  background: rgba(0,0,0,0.6);
+  color: #00f0ff;
+  font-family: monospace;
+  font-size: 12px;
+  border-radius: 10px;
+  z-index: 9999;
+  backdrop-filter: blur(10px);
+  white-space: pre;
+  pointer-events: none;
+">
+  Ready
+</div>
+
+<!-- =========================
+     START BUTTON
+========================= -->
+<button id="start" style="
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  padding: 10px 16px;
+  z-index: 9999;
+">
+  Start Audio
+</button>
+
+<!-- =========================
+     CONTROLS - REMOVE RE_ADD IF NEEDED
+========================= -->
+
+
+<!-- =========================
+     WEBCAM FEED + HAND OVERLAY
+========================= -->
+<video
+  id="video"
+  autoplay
+  playsinline
+  style="
+    position: fixed;
+    top: 50px;
+    left: 20px;
+    width: 240px;
+    height: 180px;
+    border-radius: 12px;
+    border: 3px solid #002862;
+    box-shadow: 0 0 25px #002862;
+    object-fit: cover;
+    z-index: 9999;
+  "
+></video>
+
+<canvas
+  id="overlay"
+  width="240"
+  height="180"
+  style="
+    position: fixed;
+    top: 50px;
+    left: 20px;
+    width: 240px;
+    height: 180px;
+    border-radius: 12px;
+    border: 3px solid transparent;
+    pointer-events: none;
+    z-index: 10000;
+  "
+></canvas>
+
+<!-- =========================
+     LIBRARIES
+========================= -->
+<script src="https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+<!-- BUTTONS -->
+<div id="sfxButtons">
+  <div class="sfxBtn" id="capBtn">CAP</div>
+  <div class="sfxBtn" id="splatBtn">SPLAT</div>
+  <div class="sfxBtn" id="squeezeBtn">SQUEEZE</div>
+  <div class="sfxBtn" id="stirBtn">STIR</div>
+</div>
+
+<canvas id="eqCanvas" width="600" height="160"
+  style="position:fixed;bottom:20px;right:280px;border-radius:12px;"></canvas>
+
+<!-- YOUR APP -->
+<script src="app.js"></script>
+
+</body>
+</html>
